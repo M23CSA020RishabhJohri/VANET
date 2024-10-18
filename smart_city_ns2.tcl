@@ -9,18 +9,8 @@ $ns trace-all $tracefile
 set namfile [open out.nam w]
 $ns namtrace-all $namfile
 
-# Define finish procedure to close files after simulation ends
-proc finish {} {
-    global ns tracefile namfile
-    $ns flush-trace
-    close $tracefile
-    close $namfile
-    exec nam out.nam &
-    exit 0
-}
-
 # Create an instance of God (General Operations Director)
-create-god 10  ;# Specify the number of mobile nodes, adjust as needed
+create-god 10  ;# Specify the number of mobile nodes
 
 # Wireless settings
 set val(chan)           [new Channel/WirelessChannel] ;# Channel type
@@ -52,7 +42,7 @@ $ns node-config -adhocRouting AODV \
 set topo [new Topography]
 $topo load_flatgrid $val(x) $val(y)
 
-# Create RSUs and vehicle nodes
+# Create RSUs and vehicle nodes as mobile nodes
 set rsu1 [$ns node]  ;# Roadside Unit 1
 set rsu2 [$ns node]  ;# Roadside Unit 2
 
@@ -61,7 +51,7 @@ set vehicle2 [$ns node]
 set vehicle3 [$ns node]
 set vehicle4 [$ns node]
 
-# Set up movement (optional)
+# Set up movement for mobile nodes
 $ns at 0.0 "$vehicle1 setdest 100 100 10.0"
 $ns at 0.0 "$vehicle2 setdest 200 200 10.0"
 $ns at 0.0 "$vehicle3 setdest 300 300 10.0"
