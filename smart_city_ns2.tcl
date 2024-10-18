@@ -1,25 +1,83 @@
-# Create TCP/FTP connections between vehicles and RSUs (V2R communication)
-set tcp [new Agent/TCP]
-$ns attach-agent $node(0) $tcp
-set sink [new Agent/TCPSink]
-$ns attach-agent $rsu(0) $sink
-$ns connect $tcp $sink
+# Create a simulator object
+set ns [new Simulator]
 
-# Create Application/FTP for V2R communication
-set ftp [new Application/FTP]
-$ftp attach-agent $tcp
-$ftp set type_ FTP
-$ns at 1.0 "$ftp start"  ;# Schedule the FTP application to start at time 1.0
+# Define trace and nam file for simulation output
+set tracefile [open out.tr w]
+set namfile [open out.nam w]
+$ns trace-all $tracefile
+$ns namtrace-all $namfile
 
-# Create vehicle-to-vehicle communication (V2V)
-set tcp2 [new Agent/TCP]
-$ns attach-agent $node(1) $tcp2
-set sink2 [new Agent/TCPSink]
-$ns attach-agent $node(2) $sink2
-$ns connect $tcp2 $sink2
+# Define a finish procedure to close the files at the end of the simulation
+proc finish {} {
+    global ns tracefile namfile
+    $ns flush-trace
+    close $tracefile
+    close $namfile
+    exec nam out.nam &
+    exit 0
+}
 
-# Create Application/FTP for V2V communication
-set ftp2 [new Application/FTP]
-$ftp2 attach-agent $tcp2
-$ftp2 set type_ FTP
-$ns at 2.0 "$ftp2 start"  ;# Schedule the second FTP application to start at time 2.0
+# Define topology parameters
+set numVehicles 10    ;# Number of vehicles
+set numRSU 2          ;# Number of RSUs
+set junctionDist 300   ;# Distance between junctions
+set laneLength 500     ;# Length of each road section
+
+# Create RSU and vehicle nodes
+set rsu1 [$ns node]
+set rsu2 [$ns node]
+
+# Create vehicle nodes
+for {set i 0} {$i < $numVehicles} {incr i} {
+    set vehicle($i) [$ns node]
+}
+
+# Create TCP agents and CBR traffic
+for {set i 0} {$i < $numVehicles} {incr i} {
+    # TCP sender and receiver
+    set tcp($i) [new Agent/TCP]
+    set sink($i) [new Agent/TCPSink]
+
+    # Attach agents to vehicles
+    $ns attach-agent $vehicle($i) $tcp($i)
+    $ns attach-agent $vehicle($i) $sink($i)
+
+    # Create V2V traffic between vehicle pairs
+    if {$i < [expr $numVehicles-1]} {
+        $ns connect $tcp($i) $sink([expr $i+1])
+    } else {
+        $ns connect $tcp($i) $sink(0)
+    }
+
+    # Start TCP traffic
+    set cbr($i) [new Application/Traffic/CBR]
+    $cbr($i) attach-agent $tcp($i)
+    $ns at 1.0 "$cbr($i) start"
+}
+
+# Create V2R communication between vehicles and RSUs
+for {set i 0} {$i < $numRSU} {incr i} {
+    set rsu_tcp($i) [new Agent/TCP]
+    set rsu_sink($i) [new Agent/TCPSink]
+    $ns attach-agent $rsu($i) $rsu_tcp($i)
+    $ns attach-agent $rsu($i) $rsu_sink($i)
+
+    # Connect some vehicles to RSUs
+    $ns connect $tcp($i) $rsu_sink($i)
+}
+
+# Define movement patterns (optional)
+for {set i 0} {$i < $numVehicles} {incr i} {
+    set xPos [expr $i * 50]
+    set yPos 0
+    $ns at 0.0 "$vehicle($i) setdest $xPos $yPos 10.0"
+}
+
+# Setup routing protocol (AODV to match AWK script)
+$ns rtproto AODV
+
+# Simulation end time
+$ns at 10.0 "finish"
+
+# Run the simulation
+$ns run
