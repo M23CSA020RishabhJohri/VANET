@@ -19,8 +19,36 @@ proc finish {} {
     exit 0
 }
 
-# Configure nodes to use AODV as the routing protocol
-$ns node-config -adhocRouting AODV
+# Wireless settings (fix for the "chan" variable issue)
+# Define the channel type and wireless-specific parameters
+set val(chan)           Channel/WirelessChannel  ;# Channel type
+set val(prop)           Propagation/TwoRayGround ;# Propagation model
+set val(netif)          Phy/WirelessPhy          ;# Network interface
+set val(mac)            Mac/802_11               ;# MAC type
+set val(ifq)            Queue/DropTail/PriQueue  ;# Interface queue type
+set val(ll)             LL                       ;# Link layer type
+set val(ant)            Antenna/OmniAntenna      ;# Antenna model
+set val(x)              500                      ;# X dimension of the topography
+set val(y)              500                      ;# Y dimension of the topography
+
+# Configure wireless node parameters
+$ns node-config -adhocRouting AODV \
+                -llType $val(ll) \
+                -macType $val(mac) \
+                -ifqType $val(ifq) \
+                -ifqLen 50 \
+                -antType $val(ant) \
+                -propType $val(prop) \
+                -phyType $val(netif) \
+                -channelType $val(chan) \
+                -topoInstance [new Topography] \
+                -agentTrace ON \
+                -routerTrace ON \
+                -macTrace OFF
+
+# Create wireless topology
+$ns set-topography [new Topography]
+$ns topography load_flatgrid $val(x) $val(y)
 
 # Set up a topology for the smart city with 2 RSUs and vehicles
 set rsu1 [$ns node]  ;# Roadside Unit 1
@@ -36,13 +64,13 @@ set vehicle4 [$ns node]
 set bw 2Mb
 set delay 10ms
 
-# Add communication links
-$ns duplex-link $rsu1 $vehicle1 $bw $delay DropTail
-$ns duplex-link $rsu1 $vehicle2 $bw $delay DropTail
-$ns duplex-link $rsu2 $vehicle3 $bw $delay DropTail
-$ns duplex-link $rsu2 $vehicle4 $bw $delay DropTail
-$ns duplex-link $vehicle1 $vehicle2 $bw $delay DropTail
-$ns duplex-link $vehicle3 $vehicle4 $bw $delay DropTail
+# Add communication links (for V2V and V2R communication)
+$ns simplex-link $rsu1 $vehicle1 $bw $delay DropTail
+$ns simplex-link $rsu1 $vehicle2 $bw $delay DropTail
+$ns simplex-link $rsu2 $vehicle3 $bw $delay DropTail
+$ns simplex-link $rsu2 $vehicle4 $bw $delay DropTail
+$ns simplex-link $vehicle1 $vehicle2 $bw $delay DropTail
+$ns simplex-link $vehicle3 $vehicle4 $bw $delay DropTail
 
 # Define TCP agents (for V2V and V2R communication)
 set tcp1 [new Agent/TCP]
