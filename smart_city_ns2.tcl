@@ -1,14 +1,6 @@
 # Initialize the simulator
 set ns [new Simulator]
 
-# Open the trace file for analysis
-set tracefile [open out.tr w]
-$ns trace-all $tracefile
-
-# Open the NAM (Network Animator) file
-set namfile [open out.nam w]
-$ns namtrace-all $namfile
-
 # Create an instance of God (General Operations Director)
 create-god 10  ;# Specify the number of mobile nodes
 
@@ -52,10 +44,11 @@ set vehicle3 [$ns node]
 set vehicle4 [$ns node]
 
 # Set up movement for mobile nodes
-$ns at 0.0 "$vehicle1 setdest 100 100 10.0"
-$ns at 0.0 "$vehicle2 setdest 200 200 10.0"
-$ns at 0.0 "$vehicle3 setdest 300 300 10.0"
-$ns at 0.0 "$vehicle4 setdest 400 400 10.0"
+# Correct usage of setdest for mobile nodes
+$ns at 0.1 "$vehicle1 setdest 100 100 10.0"
+$ns at 0.2 "$vehicle2 setdest 200 200 10.0"
+$ns at 0.3 "$vehicle3 setdest 300 300 10.0"
+$ns at 0.4 "$vehicle4 setdest 400 400 10.0"
 
 # Add communication links
 set bw 2Mb
