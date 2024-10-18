@@ -32,17 +32,21 @@ for {set i 0} {$i < $numVehicles} {incr i} {
     set vehicle($i) [$ns node]
 }
 
-# Create TCP agents and CBR traffic
+# First, create all TCP agents and sinks
 for {set i 0} {$i < $numVehicles} {incr i} {
-    # TCP sender and receiver
     set tcp($i) [new Agent/TCP]
     set sink($i) [new Agent/TCPSink]
+}
 
+# Attach TCP agents and sinks to the respective vehicles
+for {set i 0} {$i < $numVehicles} {incr i} {
     # Attach agents to vehicles
     $ns attach-agent $vehicle($i) $tcp($i)
     $ns attach-agent $vehicle($i) $sink($i)
+}
 
-    # Create V2V traffic between vehicle pairs
+# Create V2V traffic between vehicle pairs
+for {set i 0} {$i < $numVehicles} {incr i} {
     if {$i < [expr $numVehicles-1]} {
         $ns connect $tcp($i) $sink([expr $i+1])
     } else {
