@@ -1,95 +1,81 @@
-# Initialize the simulator
+# Define the simulation environment
 set ns [new Simulator]
+set tracefile [open out.tr w]
+$ns trace-all $tracefile
 
-# Create an instance of God (General Operations Director)
-create-god 10  ;# Specify the number of mobile nodes
+set nf [open out.nam w]
+$ns namtrace-all $nf
 
-# Wireless settings
-set val(chan)           [new Channel/WirelessChannel] ;# Channel type
-set val(prop)           Propagation/TwoRayGround      ;# Propagation model
-set val(netif)          Phy/WirelessPhy               ;# Network interface
-set val(mac)            Mac/802_11                    ;# MAC type
-set val(ifq)            Queue/DropTail/PriQueue       ;# Interface queue type
-set val(ll)             LL                            ;# Link layer type
-set val(ant)            Antenna/OmniAntenna           ;# Antenna model
-set val(x)              500                           ;# X dimension of the topography
-set val(y)              500                           ;# Y dimension of the topography
+# Define a topology
+set num_nodes 10   ;# Total number of vehicles
+set rsu_nodes 2    ;# Number of RSUs
 
-# Configure wireless node parameters
-$ns node-config -adhocRouting AODV \
-                -llType $val(ll) \
-                -macType $val(mac) \
-                -ifqType $val(ifq) \
-                -ifqLen 50 \
-                -antType $val(ant) \
-                -propType $val(prop) \
-                -phyType $val(netif) \
-                -channel $val(chan) \
-                -topoInstance [new Topography] \
-                -agentTrace ON \
-                -routerTrace ON \
-                -macTrace OFF
+# Create Nodes
+for {set i 0} {$i < $num_nodes} {incr i} {
+    set node($i) [$ns node]
+}
 
-# Set the topography
-set topo [new Topography]
-$topo load_flatgrid $val(x) $val(y)
+for {set i 0} {$i < $rsu_nodes} {incr i} {
+    set rsu($i) [$ns node]
+}
 
-# Create RSUs and vehicle nodes as mobile nodes
-set rsu1 [$ns node]  ;# Roadside Unit 1
-set rsu2 [$ns node]  ;# Roadside Unit 2
+# Define TCP as the transmission model
+Agent/TCP set packetSize_ 1000
+Agent/TCP set window_ 32
 
-set vehicle1 [$ns node]
-set vehicle2 [$ns node]
-set vehicle3 [$ns node]
-set vehicle4 [$ns node]
+# Create TCP/FTP connections between vehicles and RSUs (V2R communication)
+set tcp [new Agent/TCP]
+$ns attach-agent $node(0) $tcp
+set sink [new Agent/TCPSink]
+$ns attach-agent $rsu(0) $sink
+$ns connect $tcp $sink
 
-# Set up movement for mobile nodes
-# Correct usage of setdest for mobile nodes
-$ns at 0.1 "$vehicle1 setdest 100 100 10.0"
-$ns at 0.2 "$vehicle2 setdest 200 200 10.0"
-$ns at 0.3 "$vehicle3 setdest 300 300 10.0"
-$ns at 0.4 "$vehicle4 setdest 400 400 10.0"
+set ftp [new Application/FTP]
+$ftp attach-agent $tcp
+$ftp set type_ FTP
+$ftp start 1.0
 
-# Add communication links
-set bw 2Mb
-set delay 10ms
-$ns simplex-link $rsu1 $vehicle1 $bw $delay DropTail
-$ns simplex-link $rsu1 $vehicle2 $bw $delay DropTail
-$ns simplex-link $rsu2 $vehicle3 $bw $delay DropTail
-$ns simplex-link $rsu2 $vehicle4 $bw $delay DropTail
-$ns simplex-link $vehicle1 $vehicle2 $bw $delay DropTail
-$ns simplex-link $vehicle3 $vehicle4 $bw $delay DropTail
-
-# Define TCP agents (for V2V and V2R communication)
-set tcp1 [new Agent/TCP]
-$ns attach-agent $vehicle1 $tcp1
-
-set sink1 [new Agent/TCPSink]
-$ns attach-agent $vehicle2 $sink1
-$ns connect $tcp1 $sink1
-
+# Create vehicle-to-vehicle communication (V2V)
 set tcp2 [new Agent/TCP]
-$ns attach-agent $vehicle3 $tcp2
-
+$ns attach-agent $node(1) $tcp2
 set sink2 [new Agent/TCPSink]
-$ns attach-agent $vehicle4 $sink2
+$ns attach-agent $node(2) $sink2
 $ns connect $tcp2 $sink2
 
-# Start communication
-$ns at 1.0 "$tcp1 start"
-$ns at 1.5 "$tcp2 start"
+set ftp2 [new Application/FTP]
+$ftp2 attach-agent $tcp2
+$ftp2 set type_ FTP
+$ftp2 start 2.0
 
-# Define CBR traffic for vehicles to RSUs (V2R communication)
-set cbr1 [new Application/Traffic/CBR]
-$cbr1 set packetSize_ 500
-$cbr1 set interval_ 0.005
-$cbr1 attach-agent $tcp1
+# Define mobility
+$node(0) set X_ 10.0
+$node(0) set Y_ 10.0
+$node(1) set X_ 50.0
+$node(1) set Y_ 50.0
+$node(2) set X_ 100.0
+$node(2) set Y_ 100.0
 
-set cbr2 [new Application/Traffic/CBR]
-$cbr2 set packetSize_ 500
-$cbr2 set interval_ 0.005
-$cbr2 attach-agent $tcp2
+$rsu(0) set X_ 200.0
+$rsu(0) set Y_ 200.0
 
-# Finish and run the simulation
-$ns at 10.0 "finish"
+$rsu(1) set X_ 300.0
+$rsu(1) set Y_ 300.0
+
+# Use AODV routing protocol for both V2V and V2R communication
+$ns node-config -adhocRouting AODV
+
+# Simulation parameters
+$ns at 50.0 "finish"
+
+# Finish function
+proc finish {} {
+    global ns tracefile nf
+    $ns flush-trace
+    close $tracefile
+    close $nf
+    exec nam out.nam &
+    exit 0
+}
+
+# Start the simulation
 $ns run
