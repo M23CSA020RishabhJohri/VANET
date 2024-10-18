@@ -19,17 +19,16 @@ proc finish {} {
     exit 0
 }
 
-# Wireless settings (fix for the "chan" variable issue)
-# Define the channel type and wireless-specific parameters
-set val(chan)           Channel/WirelessChannel  ;# Channel type
-set val(prop)           Propagation/TwoRayGround ;# Propagation model
-set val(netif)          Phy/WirelessPhy          ;# Network interface
-set val(mac)            Mac/802_11               ;# MAC type
-set val(ifq)            Queue/DropTail/PriQueue  ;# Interface queue type
-set val(ll)             LL                       ;# Link layer type
-set val(ant)            Antenna/OmniAntenna      ;# Antenna model
-set val(x)              500                      ;# X dimension of the topography
-set val(y)              500                      ;# Y dimension of the topography
+# Wireless settings
+set val(chan)           [new Channel/WirelessChannel] ;# Channel type
+set val(prop)           Propagation/TwoRayGround      ;# Propagation model
+set val(netif)          Phy/WirelessPhy               ;# Network interface
+set val(mac)            Mac/802_11                    ;# MAC type
+set val(ifq)            Queue/DropTail/PriQueue       ;# Interface queue type
+set val(ll)             LL                            ;# Link layer type
+set val(ant)            Antenna/OmniAntenna           ;# Antenna model
+set val(x)              500                           ;# X dimension of the topography
+set val(y)              500                           ;# Y dimension of the topography
 
 # Configure wireless node parameters
 $ns node-config -adhocRouting AODV \
@@ -40,31 +39,34 @@ $ns node-config -adhocRouting AODV \
                 -antType $val(ant) \
                 -propType $val(prop) \
                 -phyType $val(netif) \
-                -channelType $val(chan) \
+                -channel $val(chan) \
                 -topoInstance [new Topography] \
                 -agentTrace ON \
                 -routerTrace ON \
                 -macTrace OFF
 
-# Create wireless topology
-$ns set-topography [new Topography]
-$ns topography load_flatgrid $val(x) $val(y)
+# Set the topography
+set topo [new Topography]
+$topo load_flatgrid $val(x) $val(y)
 
-# Set up a topology for the smart city with 2 RSUs and vehicles
+# Create RSUs and vehicle nodes
 set rsu1 [$ns node]  ;# Roadside Unit 1
 set rsu2 [$ns node]  ;# Roadside Unit 2
 
-# Define vehicles
 set vehicle1 [$ns node]
 set vehicle2 [$ns node]
 set vehicle3 [$ns node]
 set vehicle4 [$ns node]
 
-# Define link parameters (delay and bandwidth)
+# Set up movement (optional)
+$ns at 0.0 "$vehicle1 setdest 100 100 10.0"
+$ns at 0.0 "$vehicle2 setdest 200 200 10.0"
+$ns at 0.0 "$vehicle3 setdest 300 300 10.0"
+$ns at 0.0 "$vehicle4 setdest 400 400 10.0"
+
+# Add communication links
 set bw 2Mb
 set delay 10ms
-
-# Add communication links (for V2V and V2R communication)
 $ns simplex-link $rsu1 $vehicle1 $bw $delay DropTail
 $ns simplex-link $rsu1 $vehicle2 $bw $delay DropTail
 $ns simplex-link $rsu2 $vehicle3 $bw $delay DropTail
@@ -101,28 +103,6 @@ set cbr2 [new Application/Traffic/CBR]
 $cbr2 set packetSize_ 500
 $cbr2 set interval_ 0.005
 $cbr2 attach-agent $tcp2
-
-# Performance measurement: Packet Delivery Ratio, Packet Loss, Throughput
-
-# Monitor packet delivery and loss for vehicles
-set pd-monitor [$ns monitor-queue $vehicle1 $vehicle2]
-set pd-monitor2 [$ns monitor-queue $vehicle3 $vehicle4]
-
-# Throughput calculation
-proc calculate_throughput {queue} {
-    set totalBytes 0
-    set startTime 0
-    set endTime 0
-    foreach {t bytes} [$queue get-bytes] {
-        if {$startTime == 0} {
-            set startTime $t
-        }
-        set endTime $t
-        set totalBytes [expr $totalBytes + $bytes]
-    }
-    set throughput [expr $totalBytes * 8 / ($endTime - $startTime)]
-    return $throughput
-}
 
 # Finish and run the simulation
 $ns at 10.0 "finish"
