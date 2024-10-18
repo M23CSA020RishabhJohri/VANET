@@ -19,6 +19,9 @@ proc finish {} {
     exit 0
 }
 
+# Configure nodes to use AODV as the routing protocol
+$ns node-config -adhocRouting AODV
+
 # Set up a topology for the smart city with 2 RSUs and vehicles
 set rsu1 [$ns node]  ;# Roadside Unit 1
 set rsu2 [$ns node]  ;# Roadside Unit 2
@@ -40,9 +43,6 @@ $ns duplex-link $rsu2 $vehicle3 $bw $delay DropTail
 $ns duplex-link $rsu2 $vehicle4 $bw $delay DropTail
 $ns duplex-link $vehicle1 $vehicle2 $bw $delay DropTail
 $ns duplex-link $vehicle3 $vehicle4 $bw $delay DropTail
-
-# Apply AODV as the routing protocol (alternatively, DSR or DSDV can be used)
-$ns rtproto AODV
 
 # Define TCP agents (for V2V and V2R communication)
 set tcp1 [new Agent/TCP]
