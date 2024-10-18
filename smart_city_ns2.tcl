@@ -24,10 +24,10 @@ set junctionDist 300   ;# Distance between junctions
 set laneLength 500     ;# Length of each road section
 
 # Create RSU and vehicle nodes
-set rsu1 [$ns node]
-set rsu2 [$ns node]
+for {set i 0} {$i < $numRSU} {incr i} {
+    set rsu($i) [$ns node]   ;# Create RSU nodes properly
+}
 
-# Create vehicle nodes
 for {set i 0} {$i < $numVehicles} {incr i} {
     set vehicle($i) [$ns node]
 }
@@ -64,7 +64,7 @@ for {set i 0} {$i < $numVehicles} {incr i} {
 for {set i 0} {$i < $numRSU} {incr i} {
     set rsu_tcp($i) [new Agent/TCP]
     set rsu_sink($i) [new Agent/TCPSink]
-    $ns attach-agent $rsu($i) $rsu_tcp($i)
+    $ns attach-agent $rsu($i) $rsu_tcp($i)     ;# Attach agents to RSUs correctly
     $ns attach-agent $rsu($i) $rsu_sink($i)
 
     # Connect some vehicles to RSUs
