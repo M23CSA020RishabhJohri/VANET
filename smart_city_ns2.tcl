@@ -19,6 +19,9 @@ proc finish {} {
     exit 0
 }
 
+# Create an instance of God (General Operations Director)
+create-god 10  ;# Specify the number of mobile nodes, adjust as needed
+
 # Wireless settings
 set val(chan)           [new Channel/WirelessChannel] ;# Channel type
 set val(prop)           Propagation/TwoRayGround      ;# Propagation model
