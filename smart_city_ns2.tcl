@@ -46,6 +46,7 @@ for {set i 0} {$i < $numVehicles} {incr i} {
     if {$i < [expr $numVehicles-1]} {
         $ns connect $tcp($i) $sink([expr $i+1])
     } else {
+        # Connect last vehicle back to the first vehicle
         $ns connect $tcp($i) $sink(0)
     }
 
